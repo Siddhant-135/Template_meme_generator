@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ZipIT — one caption, this strip</title>
+    <meta name="description" content="Type one line, drag it, download the PNG." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="mast">
+        <p class="kicker">The only template</p>
+        <h1>ZipIT</h1>
+      </header>
+
+      <main class="stage">
+        <section class="plate-wrap" aria-label="Meme preview">
+          <div class="plate" id="plate" data-state="loading">
+            <p class="plate-status" id="plate-status">Loading the strip…</p>
+            <img
+              id="template"
+              src="template.png"
+              alt="Three-panel rooftop still of Iron Man and Spider-Man with the ZipIT captions already on the frames"
+              width="862"
+              height="1246"
+            />
+            <p class="caption" id="caption" hidden>
+              When I’m just trying to save my grades and mentee asks Jane Street
+              mai intern kaise lagegi
+            </p>
+          </div>
+        </section>
+
+        <aside class="tools">
+          <label class="field">
+            <span>Caption</span>
+            <textarea
+              id="text"
+              rows="3"
+              maxlength="220"
+              placeholder="When I’m just trying to save my grades and mentee asks Jane Street mai intern kaise lagegi"
+              autocomplete="off"
+            ></textarea>
+          </label>
+
+          <label class="field">
+            <span class="size-row">
+              Size
+              <output id="size-out" for="size">34</output>
+            </span>
+            <input id="size" type="range" min="18" max="72" value="34" />
+          </label>
+
+          <p class="hint">Centered. Drag the words on the strip.</p>
+
+          <button type="button" class="download" id="download" disabled>
+            Download PNG
+          </button>
+        </aside>
+      </main>
+    </div>
+    <script src="editor.js"></script>
+  </body>
+</html>
