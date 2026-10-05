@@ -12,6 +12,13 @@
     "When I’m just trying to save my grades and mentee asks Jane Street mai intern kaise lagegi";
   const CAPTION_FONT =
     '"SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif';
+  const db =
+    window.supabase && typeof window.supabase.createClient === "function"
+      ? window.supabase.createClient(
+          "https://oyqnoqkutmfezfczotbu.supabase.co",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95cW5vcWt1dG1mZXpmY3pvdGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExODQzMTcsImV4cCI6MjEwNjc2MDMxN30.hQNUmUmgaU2awcHIAE56XRCufFn6uUZseDfqu74HtLg"
+        )
+      : null;
   const pos = { x: 50, y: 8 };
   let ready = false;
 
@@ -66,43 +73,100 @@
 
   function exportPng() {
     const raw = captionText();
-    if (!ready || !raw) return;
+    if (!ready || !raw || !img.naturalWidth) return;
 
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
     const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, width, height);
 
-    const fontPx = Number(size.value);
+    const plateRect = plate.getBoundingClientRect();
+    const capRect = caption.getBoundingClientRect();
+    const scaleX = width / plateRect.width;
+    const scaleY = height / plateRect.height;
+    const style = window.getComputedStyle(caption);
+    const fontPx = parseFloat(style.fontSize) * scaleX;
     ctx.font = `400 ${fontPx}px ${CAPTION_FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+    ctx.shadowBlur = 2 * scaleX;
+    ctx.shadowOffsetY = 1 * scaleY;
 
-    const maxWidth = canvas.width * 0.92;
+    const maxWidth = capRect.width * scaleX;
     const lines = wrapLines(ctx, raw, maxWidth);
     const lineHeight = fontPx * 1.2;
-    const cx = (pos.x / 100) * canvas.width;
-    const cy = (pos.y / 100) * canvas.height;
+    const cx = (capRect.left + capRect.width / 2 - plateRect.left) * scaleX;
+    const cy = (capRect.top + capRect.height / 2 - plateRect.top) * scaleY;
     const startY = cy - ((lines.length - 1) * lineHeight) / 2;
-
-    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-    ctx.shadowBlur = 2;
-    ctx.shadowOffsetY = 1;
-    ctx.fillStyle = "#fff";
     lines.forEach((line, i) => {
       ctx.fillText(line, cx, startY + i * lineHeight, maxWidth);
     });
 
     canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "zipit.png";
-      a.click();
-      URL.revokeObjectURL(url);
+      if (!blob || blob.size < 1000) return;
+      savePng(blob);
+      track("download", "Download PNG");
+      archiveMeme(blob, raw);
     }, "image/png");
+  }
+
+  function savePng(blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "zipit.png";
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      a.remove();
+      URL.revokeObjectURL(url);
+    }, 2000);
+  }
+
+  async function archiveMeme(blob, caption) {
+    if (!db) return;
+    const id = crypto.randomUUID();
+    const storagePath = `${id}.png`;
+    const { error: uploadError } = await db.storage
+      .from("memes")
+      .upload(storagePath, blob, {
+        contentType: "image/png",
+        upsert: false,
+      });
+    if (uploadError) {
+      console.error("Could not store meme image", uploadError);
+      return;
+    }
+    const { error: rowError } = await db.from("memes").insert({
+      id,
+      caption,
+      font_size: Number(size.value),
+      pos_x: pos.x,
+      pos_y: pos.y,
+      storage_path: storagePath,
+    });
+    if (rowError) {
+      console.error("Could not store meme row", rowError);
+    }
+  }
+
+  function track(path, title) {
+    if (!window.goatcounter || typeof window.goatcounter.count !== "function") {
+      return;
+    }
+    window.goatcounter.count({
+      path,
+      title,
+      event: true,
+      no_session: true,
+    });
   }
 
   img.addEventListener("load", () => {
